@@ -247,9 +247,33 @@ int main() {
     for (int i = 0; i < muchii; i++){
         int n1, n2;
         fin >> n1 >> n2;
-        G.adaugaInListaAdOrientat(n1, n2);
-        //G.adaugaInListaAdNeorientat(n1, n2);
+//        G.adaugaInListaAdOrientat(n1, n2);
+        G.adaugaInListaAdNeorientat(n1, n2);
     }
+
+//    fout<<G.nrCmpConexe();
+
+//    G.afisareDistante(s);
+
+//    G.sortareTopologica();
+
+//    vector<vector<int>> componenteB = G.componenteBiconexe();
+//    fout<<componenteB.size()<<"\n";
+//    for(int i = 0; i < componenteB.size(); i++) {
+//        for(int j = 0; j < componenteB[i].size(); j++) {
+//            fout<<componenteB[i][j]<<"  ";
+//        }
+//        fout<<"\n";
+//    }
+
+//    vector<vector<int>> componenteTc = G.componenteTareConexe();
+//    fout<<componenteTc.size()<<"\n";
+//    for(int i = 0; i < componenteTc.size(); i++) {
+//        for(int j = 0; j < componenteTc[i].size(); j++) {
+//            fout<<componenteTc[i][j]<<" ";
+//        }
+//        fout<<"\n";
+//    }
 
     //HavelHakimi();
 
