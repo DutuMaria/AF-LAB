@@ -10,14 +10,39 @@
 
 using namespace std;
 
-const int NMAX = 200001;
+const int NMAX = 100001;
 const int INF = numeric_limits<int>::max();
 
-//ifstream fin ("apm.in");
-//ofstream fout ("apm.out");
+//ifstream fin ("dfs.in");
+//ofstream fout ("dfs.out");
 
-ifstream fin("disjoint.in");
-ofstream fout("disjoint.out");
+//ifstream fin ("bfs.in");
+//ofstream fout ("bfs.out");
+
+//ifstream fin ("sortaret.in");
+//ofstream fout ("sortaret.out");
+
+//ifstream fin ("hh.in");
+//ofstream fout ("hh.out");
+
+//ifstream fin ("biconex.in");
+//ofstream fout ("biconex.out");
+
+//ifstream fin ("ctc.in");
+//ofstream fout ("ctc.out");
+
+ifstream fin ("apm.in");
+ofstream fout ("apm.out");
+
+//ifstream fin ("dijkstra.in");
+//ofstream fout ("dijkstra.out");
+
+//ifstream fin ("bellmanford.in");
+//ofstream fout ("bellmanford.out");
+
+//ifstream fin("disjoint.in");
+//ofstream fout("disjoint.out");
+
 
 auto cmp = [](const pair<int, int>& p1, const pair<int, int>& p2)
 {
@@ -26,11 +51,15 @@ auto cmp = [](const pair<int, int>& p1, const pair<int, int>& p2)
 
 class DisjointSet{
 private:
-    int nrMultimi;
+    int nrMultimi, nrOperatii;
     vector<int> tata;
-    vector<int> h;
+    vector<int> h; // vector de inaltimi
 public:
     DisjointSet(int nrMultimi) : nrMultimi(nrMultimi){
+        tata.resize(nrMultimi + 1, -1);
+        h.resize(nrMultimi + 1, 0);
+    }
+    DisjointSet(int nrMultimi, int nrOperatii) : nrMultimi(nrMultimi), nrOperatii(nrOperatii){
         tata.resize(nrMultimi + 1, -1);
         h.resize(nrMultimi + 1, 0);
     }
@@ -38,7 +67,7 @@ public:
     int gasesteReprez(const int &nr);
     void reuneste(const int &x, const int &y);
     bool query(const int &x, const int &y);
-
+    void afisareDisjointSet();
 };
 
 void DisjointSet::initializare(const int &nr) {
@@ -69,73 +98,106 @@ bool DisjointSet::query(const int &x, const int &y) {
     return gasesteReprez(x) == gasesteReprez(y);
 }
 
+void DisjointSet::afisareDisjointSet() {
+    for(int i = 1;  i <= nrMultimi; i++){
+        initializare(i);
+    }
+
+    for (int i = 0; i < nrOperatii;  i++){
+        int op, x, y;
+        fin >> op >> x >> y;
+
+        if (op == 1){
+            reuneste(x, y);
+        }
+        else{
+            bool ans = query(x, y);
+            if (ans)
+                fout << "DA\n";
+            else
+                fout << "NU\n";
+        }
+    }
+}
+
 class Graf{
 private:
     int nrNoduri, nrMuchii;
     vector<int> listaAd[NMAX];
     vector<pair<int, int>> listaAdsiCosturi[NMAX];
     vector<tuple<int, int, int>> muchiiCost;
-    bitset<NMAX> viz;
-    vector<int> distante;
-    stack<int> noduriSortTop;
-    vector<vector<int>> compBiconexe;
-    vector<vector<int>> ctc;
-    void dfs(int nod);
-    void bfs(int start);
-    void dfsSortTop(int nod);
-    void dfsCompBiconexe(int nod, int nivelCrt, vector<int> &nivel, vector<int> &nivelMin, stack<int> &s);
-    void dfsCompTareConexe(int nod, int &nivelCrt, vector<int> &nivel, vector<int> &nivelMin, stack<int> &s, bitset<NMAX> &inStiva);
+//    bitset<NMAX> viz;
+
+    void dfs(const int &nod, bitset<NMAX> &viz);
+    void bfs(const int &start,  vector<int> &distante);
+    void dfsSortTop(const int &nod,   stack<int> &noduriSortTop, bitset<NMAX> &viz);
+    void dfsCompBiconexe(int nod, int nivelCrt, vector<int> &nivel, vector<int> &nivelMin, stack<int> &s, bitset<NMAX> &viz, vector<vector<int>> &compBiconexe);
+    void dfsCompTareConexe(int nod, int &nivelCrt, vector<int> &nivel, vector<int> &nivelMin, stack<int> &s, bitset<NMAX> &inStiva, bitset<NMAX> &viz, vector<vector<int>> &ctc);
     void Dijkstra(bitset<NMAX> &viz, vector<int> &distante, priority_queue<pair<int, int>, vector<pair<int,int>>, decltype(cmp)> &minHeap);
     void BellmanFord(queue<int> &coadaNoduri, vector<int> &dist, vector<int> &nrRelaxari, bitset<NMAX> &inCoada, bool &rez);
     int Apm(vector<pair<int, int>> &sol);
 public:
     Graf(int nrNoduri, int nrMuchii) : nrNoduri(nrNoduri), nrMuchii(nrMuchii) {};
-    void adaugaInListaAdOrientat(int nod1, int nod2);
-    void adaugaInListaAdNeorientat(int nod1, int nod2);
-    void adaugaMuchie(const int &nod1, const int &nod2, const int &cost);
+    void adaugaMuchie(const int &nod1, const int &nod2, bool eOrientat);
+    void adaugaInListaAdSiCosturi(const int &nod1, const int &nod2, const int &cost);
+    void adaugaMuchieCuCost(const int &nod1, const int &nod2, const int &cost);
     int nrCmpConexe();
-    void afisDistanteMinBfs(int start);
-    void sortareTopologica();
-    vector<vector<int>> componenteBiconexe();
-    vector<vector<int>> componenteTareConexe();
-    void adaugaInListaAdsiCosturiOrientat(const int &nod1, const int &nod2, const int &cost);
+    void afisareDistanteMinBfs(int start);
+    void afisareSortareTopologica();
+    void afisareComponenteBiconexe();
+    void afisareComponenteTareConexe();
     void afisareDijkstra();
     void afisareBellmanford();
     void afisareApm();
 };
 
-void Graf::adaugaInListaAdOrientat(int nod1, int nod2) {
+void Graf::adaugaMuchie(const int &nod1, const int &nod2, bool eOrientat) {
     listaAd[nod1].push_back(nod2);
+    if(!eOrientat){
+        listaAd[nod2].push_back(nod1);
+    }
 }
 
-void Graf::adaugaInListaAdNeorientat(int nod1, int nod2) {
-    listaAd[nod1].push_back(nod2);
-    listaAd[nod2].push_back(nod1);
+void Graf::adaugaInListaAdSiCosturi(const int &nod1, const int &nod2, const int &cost) {
+    listaAdsiCosturi[nod1].push_back({nod2, cost});
 }
 
-void Graf::dfs(int nod) {
+void Graf::adaugaMuchieCuCost(const int &nod1, const int &nod2, const int &cost) {
+    muchiiCost.push_back(make_tuple(cost, nod1, nod2));
+}
+
+void Graf::dfs(const int &nod, bitset<NMAX> &viz) {
     for (int i = 0; i < listaAd[nod].size(); i++){
         if (!viz[listaAd[nod][i]]){
             viz[listaAd[nod][i]] = true;
-            dfs(listaAd[nod][i]);
+            dfs(listaAd[nod][i], viz);
         }
     }
 }
 
 int Graf::nrCmpConexe() {
+    bitset<NMAX> viz;
     int nr = 0;
     for (int i = 1; i <= nrNoduri; i++){
         if (!viz[i]){
             nr++;
             viz[i] = true;
-            dfs(i);
+            dfs(i, viz);
         }
     }
     return nr;
 }
 
-void Graf::bfs(int start) {
+void Graf::afisareDistanteMinBfs(int nodStart) {
+    vector<int> distante;
     distante.resize(nrNoduri + 1, -1);
+    bfs(nodStart, distante);
+    for (int i = 1; i <= nrNoduri; i ++){
+        fout << distante[i] <<" ";
+    }
+}
+
+void Graf::bfs(const int &start, vector<int> &distante) {
     queue<int> coada;
     coada.push(start);
     distante[start] = 0;
@@ -151,17 +213,14 @@ void Graf::bfs(int start) {
     }
 }
 
-void Graf::afisDistanteMinBfs(int nodStart) {
-    bfs(nodStart);
-    for (int i = 1; i <= nrNoduri; i ++){
-        fout << distante[i] <<" ";
-    }
-}
 
-void Graf::sortareTopologica() {
+
+void Graf::afisareSortareTopologica() {
+    bitset<NMAX> viz;
+    stack<int> noduriSortTop;
     for (int i = 1; i <= nrNoduri; i++){
         if (!viz[i]) {
-            dfsSortTop(i);
+            dfsSortTop(i, noduriSortTop, viz);
         }
     }
     while (!noduriSortTop.empty()){
@@ -170,28 +229,37 @@ void Graf::sortareTopologica() {
     }
 }
 
-void Graf::dfsSortTop(int nod) {
+void Graf::dfsSortTop(const int &nod, stack<int> &noduriSortTop, bitset<NMAX> &viz) {
     viz[nod] = true;
     for (int i = 0; i < listaAd[nod].size(); i++){
         if (!viz[listaAd[nod][i]]){
-            dfsSortTop(listaAd[nod][i]);
+            dfsSortTop(listaAd[nod][i], noduriSortTop, viz);
         }
     }
     noduriSortTop.push(nod);
 }
 
-vector<vector<int>> Graf :: componenteBiconexe() {
+void Graf :: afisareComponenteBiconexe() {
+    bitset<NMAX> viz;
     vector<int> nivel;
     vector<int> nivelMin;
     nivel.resize(NMAX);
     nivelMin.resize(NMAX);
     stack<int> s;
+    vector<vector<int>> compBiconexe;
 
-    dfsCompBiconexe(1,  1, nivel, nivelMin, s);
-    return compBiconexe;
+    dfsCompBiconexe(1,  1, nivel, nivelMin, s, viz, compBiconexe);
+
+    fout<<compBiconexe.size()<<"\n";
+    for(int i = 0; i < compBiconexe.size(); i++) {
+        for(int j = 0; j < compBiconexe[i].size(); j++) {
+            fout<<compBiconexe[i][j]<<"  ";
+        }
+        fout<<"\n";
+    }
 }
 
-void Graf::dfsCompBiconexe(int nod, int nivelCrt, vector<int> &nivel, vector<int> &nivelMin, stack<int> &s) {
+void Graf::dfsCompBiconexe(int nod, int nivelCrt, vector<int> &nivel, vector<int> &nivelMin, stack<int> &s, bitset<NMAX> &viz, vector<vector<int>> &compBiconexe) {
     viz[nod] = true;
     s.push(nod);
     nivel[nod] = nivelCrt;
@@ -200,7 +268,7 @@ void Graf::dfsCompBiconexe(int nod, int nivelCrt, vector<int> &nivel, vector<int
     for (int i = 0; i < listaAd[nod].size(); i++){
         int vecin = listaAd[nod][i];
         if (!viz[vecin]){
-            dfsCompBiconexe(vecin, nivelCrt + 1, nivel, nivelMin, s);
+            dfsCompBiconexe(vecin, nivelCrt + 1, nivel, nivelMin, s, viz, compBiconexe);
             nivelMin[nod] = min(nivelMin[nod], nivelMin[vecin]);
             if (nivelMin[vecin] >= nivel[nod]){
                 vector<int> compCrt;
@@ -220,22 +288,32 @@ void Graf::dfsCompBiconexe(int nod, int nivelCrt, vector<int> &nivel, vector<int
     }
 }
 
-vector<vector<int>> Graf :: componenteTareConexe() {
+void Graf :: afisareComponenteTareConexe() {
+    bitset<NMAX> viz;
     vector<int> nivel;
     vector<int> nivelMin;
     nivel.resize(NMAX);
     nivelMin.resize(NMAX);
     stack<int> s;
     bitset<NMAX> inStiva;
+    vector<vector<int>> ctc;
     int niv = 1;
+
     for (int i = 1; i <= nrNoduri; i++){
         if (!viz[i])
-            dfsCompTareConexe(i,  niv, nivel, nivelMin, s, inStiva);
+            dfsCompTareConexe(i,  niv, nivel, nivelMin, s, inStiva,viz, ctc);
     }
-    return ctc;
+
+    fout<<ctc.size()<<"\n";
+    for (int i = 0; i < ctc.size(); i++) {
+        for(int j = 0; j < ctc[i].size(); j++) {
+            fout<<ctc[i][j]<<" ";
+        }
+        fout<<"\n";
+    }
 }
 
-void Graf::dfsCompTareConexe(int nod, int &nivelCrt, vector<int> &nivel, vector<int> &nivelMin, stack<int> &s, bitset<NMAX> &inStiva) {
+void Graf::dfsCompTareConexe(int nod, int &nivelCrt, vector<int> &nivel, vector<int> &nivelMin, stack<int> &s, bitset<NMAX> &inStiva, bitset<NMAX> &viz, vector<vector<int>> &ctc) {
     viz[nod] = true;
     s.push(nod);
     inStiva[nod] = true;
@@ -246,7 +324,7 @@ void Graf::dfsCompTareConexe(int nod, int &nivelCrt, vector<int> &nivel, vector<
     for (int i = 0; i < listaAd[nod].size(); i++) {
         int vecin = listaAd[nod][i];
         if (!viz[vecin]) {
-            dfsCompTareConexe(vecin, nivelCrt, nivel, nivelMin, s, inStiva);
+            dfsCompTareConexe(vecin, nivelCrt, nivel, nivelMin, s, inStiva, viz, ctc);
             nivelMin[nod] = min(nivelMin[nod], nivelMin[vecin]);
         } else {
             if (inStiva[vecin])
@@ -304,10 +382,6 @@ void HavelHakimi(){
     }
 }
 /* TEMA 2*/
-
-void Graf::adaugaInListaAdsiCosturiOrientat(const int &nod1, const int &nod2, const int &cost) {
-    listaAdsiCosturi[nod1].push_back({nod2, cost});
-}
 
 void Graf::afisareDijkstra() {
 //    vector<int> tata; //reconstruire drum
@@ -396,9 +470,6 @@ void Graf::BellmanFord(queue<int> &coadaNoduri, vector<int> &dist, vector<int> &
     }
 }
 
-void Graf::adaugaMuchie(const int &nod1, const int &nod2, const int &cost) {
-    muchiiCost.push_back(make_tuple(cost, nod1, nod2));
-}
 
 void Graf::afisareApm() {
     vector<pair<int, int>> sol;
@@ -436,71 +507,43 @@ int Graf::Apm(vector<pair<int, int>> &sol) {
 
 
 int main() {
-//    int noduri, muchii, s;
-//    fin >> noduri >> muchii;
-////    //fin >> noduri >> muchii >> s; // pt bfs
-//    Graf G(noduri, muchii);
-//    for (int i = 0; i < muchii; i++){
-//        int n1, n2, cost;
-////        fin >> n1 >> n2;
-////        G.adaugaInListaAdOrientat(n1, n2);
-////        G.adaugaInListaAdNeorientat(n1, n2);
-//        fin >> n1 >> n2 >> cost;
-//        G.adaugaMuchie(n1, n2, cost);
-//    }
-
-//    fout<<G.nrCmpConexe();
-
-//    G.afisDistanteMinBfs(s);
-
-//    G.sortareTopologica();
-
-//    vector<vector<int>> componenteB = G.componenteBiconexe();
-//    fout<<componenteB.size()<<"\n";
-//    for(int i = 0; i < componenteB.size(); i++) {
-//        for(int j = 0; j < componenteB[i].size(); j++) {
-//            fout<<componenteB[i][j]<<"  ";
-//        }
-//        fout<<"\n";
-//    }
-
-//    vector<vector<int>> componenteTc = G.componenteTareConexe();
-//    fout<<componenteTc.size()<<"\n";
-//    for(int i = 0; i < componenteTc.size(); i++) {
-//        for(int j = 0; j < componenteTc[i].size(); j++) {
-//            fout<<componenteTc[i][j]<<" ";
-//        }
-//        fout<<"\n";
-//    }
-
-//    HavelHakimi();
-
-
-    int nrM, nrOp;
-    fin >> nrM >> nrOp;
-    DisjointSet d(nrM);
-
-    for(int i = 1;  i <= nrM; i++){
-        d.initializare(i);
+    int noduri, muchii, s;
+    fin >> noduri >> muchii;
+//    fin >> noduri >> muchii >> s; // BFS
+    Graf G(noduri, muchii);
+    for (int i = 0; i < muchii; i++){
+        int n1, n2, cost;
+//        fin >> n1 >> n2;
+//        G.adaugaMuchie(n1, n2, 1);
+//        G.adaugaMuchie(n1, n2, 0);
+        fin >> n1 >> n2 >> cost;
+//        G.adaugaInListaAdSiCosturi(n1, n2, cost); // DIJKSTRA + BELLMAN-FORD
+        G.adaugaMuchieCuCost(n1, n2, cost); // APM
     }
 
-    for (int i = 0; i < nrOp;  i++){
-        int op, x, y;
-        fin >> op >> x >> y;
+//    fout << G.nrCmpConexe(); // DFS, neorientat
 
-        if (op == 1){
-            d.reuneste(x, y);
-        }
-        else{
-            bool ans = d.query(x, y);
-            if (ans)
-                fout << "DA\n";
-            else
-                fout << "NU\n";
-        }
-    }
+//    G.afisareDistanteMinBfs(s); // BFS, orientat
 
-//    G.afisareApm();
+//    G.afisareSortareTopologica(); // Graf orientat
+
+//    G.afisareComponenteBiconexe(); //Graf neorientat
+
+//    G.afisareComponenteTareConexe(); //Graf orientat
+
+//    HavelHakimi(); // Daca se poate construi un graf Neorientat stiind vector de grade
+
+//    G.afisareDijkstra(); // Graf orientat
+
+//    G.afisareBellmanford(); // Graf orientat
+
+//// DisjointSet
+//    int nrM, nrOp;
+//    fin >> nrM >> nrOp;
+//    DisjointSet d(nrM, nrOp);
+//    d.afisareDisjointSet();
+
+    G.afisareApm(); // Graf conex neorientat
 
     return 0;
 }
