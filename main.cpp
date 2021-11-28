@@ -7,6 +7,7 @@
 #include <numeric>
 #include <limits>
 #include <tuple>
+#include <utility>
 
 using namespace std;
 
@@ -19,6 +20,7 @@ const int NMAX_COMP_TARE_CONEXE = 100001;
 const int NMAX_DIJKSTRA = 50001;
 const int NMAX_BELLMAN_FORD = 50001;
 const int NMAX_APM = 200001;
+const int NMAX_DARB = 100001;
 
 const int INF = numeric_limits<int>::max();
 
@@ -88,6 +90,7 @@ private:
     void dfsSortTop(const int &nod, stack<int> &noduriSortTop, vector<bool> &viz);
     void dfsCompBiconexe(int nod, int nivelCrt, vector<int> &nivel, vector<int> &nivelMin, stack<int> &s, vector<bool> &viz, vector<vector<int>> &compBiconexe);
     void dfsCompTareConexe(int nod, int &nivelCrt, vector<int> &nivel, vector<int> &nivelMin, stack<int> &s, vector<bool> &inStiva, vector<bool> &viz, vector<vector<int>> &ctc);
+    int nodCuDistantaMaxima(const vector<int> &distante);
 public:
     Graf(int nrNoduri, bool eOrientat) : nrNoduri(nrNoduri), eOrientat(eOrientat) {};
     Graf(int nrNoduri, int nrMuchii, bool eOrientat) : nrNoduri(nrNoduri), nrMuchii(nrMuchii), eOrientat(eOrientat) {};
@@ -95,7 +98,7 @@ public:
     void adaugaInListaAdSiCosturi(const int &nod1, const int &nod2, const int &cost);
     void adaugaMuchieCuCost(const int &nod1, const int &nod2, const int &cost);
     int nrCmpConexe();
-    vector<int> bfs(const int &start);
+    vector<int> bfs(const int &start = 1);
     stack<int> sortareTopologica();
     vector<vector<int>> componenteBiconexe();
     vector<vector<int>> componenteTareConexe();
@@ -103,6 +106,7 @@ public:
     bool BellmanFord(vector<int> &dist, const int &s = 1);
     int Apm(vector<pair<int, int>> &sol);
     vector<vector<long long>> RoyFloyd(vector<vector<long long>> &matrDrumuriMin);
+    int diametruArbore();
 };
 
 void Graf::adaugaInListaAd(const int &nod1, const int &nod2) {
@@ -448,6 +452,23 @@ vector<vector<long long>> Graf::RoyFloyd(vector<vector<long long>> &matrDrumuriM
     return matrDrumuriMin;
 }
 
+int Graf::nodCuDistantaMaxima(const vector<int> &distante) {
+    auto  ptNodDistMax= max_element(distante.begin(), distante.end());
+    int nod = distance(distante.begin(), ptNodDistMax);
+    return nod; //nod cu distanta maxima
+}
+
+int Graf::diametruArbore() {
+    vector<int> distante = bfs();
+
+    int nod1 = nodCuDistantaMaxima(distante);
+    distante = bfs(nod1);
+    int nod2 = nodCuDistantaMaxima(distante);
+    int diametru = distante[nod2] + 1;
+
+    return diametru;
+}
+
 /* -------------------------------------------------------------------------------------------------------------------*/
 
 /*
@@ -733,18 +754,38 @@ void rezultatRoyFloyd(){
     }
 }
 
+/*
+    Darb - Diametrul unui arbore
+*/
+
+void rezultatDarb(){
+//    https://infoarena.ro/problema/darb
+    ifstream fin("darb.in");
+    ofstream fout("darb.out");
+    int nrNoduri;
+    fin >> nrNoduri;
+    Graf g(nrNoduri, false);
+    for(int i = 0; i < nrNoduri; i ++){
+        int n1, n2;
+        fin >> n1 >> n2;
+        g.adaugaInListaAd(n1, n2);
+    }
+    fout << g.diametruArbore();
+}
+
 int main() {
-//    rezultatDfs();
-//    rezultatBfs();
-//    rezultatSortareTopologica();
-//    rezultatComponenteBiconexe();
-//    rezultatComponenteTareConexe();
-//    rezultatHavelHakimi();
-//    rezultatDijkstra();
-//    rezultatBellmanFord();
-//    rezultatDisjoint();
-//    rezultatApm();
-//    rezultatRoyFloyd();
+    rezultatDfs();
+    rezultatBfs();
+    rezultatSortareTopologica();
+    rezultatComponenteBiconexe();
+    rezultatComponenteTareConexe();
+    rezultatHavelHakimi();
+    rezultatDijkstra();
+    rezultatBellmanFord();
+    rezultatDisjoint();
+    rezultatApm();
+    rezultatRoyFloyd();
+    rezultatDarb();
 
     return 0;
 }
