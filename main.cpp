@@ -11,17 +11,6 @@
 
 using namespace std;
 
-const int NMAX = 50001;
-const int NMAX_SORT_TOP = 50001;
-const int NMAX_BFS = 100001;
-const int NMAX_DFS = 100001;
-const int NMAX_COMP_BICONEXE = 100001;
-const int NMAX_COMP_TARE_CONEXE = 100001;
-const int NMAX_DIJKSTRA = 50001;
-const int NMAX_BELLMAN_FORD = 50001;
-const int NMAX_APM = 200001;
-const int NMAX_DARB = 100001;
-
 const int INF = numeric_limits<int>::max();
 
 auto cmp = [](const pair<int, int>& p1, const pair<int, int>& p2)
@@ -50,6 +39,25 @@ public:
     bool query(const int &x, const int &y);
 };
 
+/*
+ Paduri de multimi disjuncte
+ COMPLEXITATE: => O(M * log N)
+    INITIALIZARE: O(1), dar se face de N ori => O(N)
+    FIND_REPREZ: O(log N), dar se face de 2M ori =>  O(M * log N)
+    UNION: O(log n), dar se face de N ori => O(N * log N)
+
+ Descriere algoritm:
+    => INITIALIZARE => fiecare nod reprezinta un arbore (doar el, fiind si radacina)
+    => FIND_REPREZ  => pentru un nod, functia returneaza radacina arborelui din care face parte + optimizare (compresie de cale)
+        => compresie de cale => tatal varfurilor de pe lantul de la nod (cel pentru care apelam functia) la radacina
+                                se va seta ca fiind radacina => pentru ca reprezentantul fiecarui varf de pe acest lant
+                                sa fie mai usor de gasit in cautarile ulterioare
+                             => inaltimea NU se schimba
+    => UNION => calculam reprezentantii pentru nodurile pe care vrem sa le unim
+             => daca inaltimea primul nod e mai mare decat inaltimea ceilui de-al doilea atunci
+                reprezentatntull delui de-al doilea devine reprezentantul primului, daca nu => invers
+             => in cazul in care sunt egale inaltimile alegem oricare din rerezentanti si crestem inaltimea cu 1
+*/
 void DisjointSets::initializare(const int &nr) {
     tata[nr] = 0;
     h[nr] = 0;
@@ -58,7 +66,7 @@ void DisjointSets::initializare(const int &nr) {
 int DisjointSets::gasesteReprez(const int &nr) {
     if (tata[nr] == 0)
         return nr;
-    tata[nr] = gasesteReprez(tata[nr]);
+    tata[nr] = gasesteReprez(tata[nr]); // Optimizare - compresie de cale
     return tata[nr];
 }
 
@@ -82,8 +90,9 @@ class Graf{
 private:
     int nrNoduri, nrMuchii;
     bool eOrientat;
-    vector<int> listaAd[NMAX];
-    vector<pair<int, int>> listaAdsiCosturi[NMAX]; // pentru Bellman-Ford + Dijkstra
+    bool ePonderat;
+    vector<vector<int>> listaAd;
+    vector<vector<pair<int, int>>> listaAdsiCosturi; // pentru Bellman-Ford + Dijkstra + MaxFlow
     vector<tuple<int, int, int>> muchiiCost; // pentru APM
 
     void dfs(const int &nod, vector<bool> &viz);
@@ -91,9 +100,17 @@ private:
     void dfsCompBiconexe(int nod, int nivelCrt, vector<int> &nivel, vector<int> &nivelMin, stack<int> &s, vector<bool> &viz, vector<vector<int>> &compBiconexe);
     void dfsCompTareConexe(int nod, int &nivelCrt, vector<int> &nivel, vector<int> &nivelMin, stack<int> &s, vector<bool> &inStiva, vector<bool> &viz, vector<vector<int>> &ctc);
     int nodCuDistantaMaxima(const vector<int> &distante);
+    bool construiesteDrum(const int &start, const int &final, vector<int> &tata, vector<vector<int>> &capacitate, vector<vector<int>> &flux);
 public:
     Graf(int nrNoduri, bool eOrientat) : nrNoduri(nrNoduri), eOrientat(eOrientat) {};
-    Graf(int nrNoduri, int nrMuchii, bool eOrientat) : nrNoduri(nrNoduri), nrMuchii(nrMuchii), eOrientat(eOrientat) {};
+    Graf(int nrNoduri, int nrMuchii, bool eOrientat) : nrNoduri(nrNoduri), nrMuchii(nrMuchii), eOrientat(eOrientat){}; // Pentru APM
+    Graf(int nrNoduri, int nrMuchii, bool eOrientat, bool ePonderat) : nrNoduri(nrNoduri), nrMuchii(nrMuchii), eOrientat(eOrientat), ePonderat(ePonderat) {
+        if(!ePonderat){
+            listaAd.resize(nrNoduri + 1, vector<int>());
+        } else {
+            listaAdsiCosturi.resize(nrNoduri + 1, vector<pair<int, int>>()); // pentru Dijkstra si Bellman-Ford
+        }
+    };
     void adaugaInListaAd(const int &nod1, const int &nod2);
     void adaugaInListaAdSiCosturi(const int &nod1, const int &nod2, const int &cost);
     void adaugaMuchieCuCost(const int &nod1, const int &nod2, const int &cost);
@@ -107,6 +124,7 @@ public:
     int Apm(vector<pair<int, int>> &sol);
     vector<vector<long long>> RoyFloyd(vector<vector<long long>> &matrDrumuriMin);
     int diametruArbore();
+    int maxFlow(const int &s, const int &t);
 };
 
 void Graf::adaugaInListaAd(const int &nod1, const int &nod2) {
@@ -124,6 +142,15 @@ void Graf::adaugaMuchieCuCost(const int &nod1, const int &nod2, const int &cost)
     muchiiCost.push_back(make_tuple(cost, nod1, nod2));
 }
 
+/*
+ DFS, graf Neorientat
+ COMPLEXITATE => O(M + N)
+
+ Descriere algoritm:
+    =>
+
+*/
+
 void Graf::dfs(const int &nod, vector<bool> &viz) {
     for (int i = 0; i < listaAd[nod].size(); i++){
         if (!viz[listaAd[nod][i]]){
@@ -134,8 +161,7 @@ void Graf::dfs(const int &nod, vector<bool> &viz) {
 }
 
 int Graf::nrCmpConexe() {
-    vector<bool> viz;
-    viz.resize(nrNoduri + 1);
+    vector<bool> viz(nrNoduri + 1);
     int nr = 0;
     for (int i = 1; i <= nrNoduri; i++){
         if (!viz[i]){
@@ -147,9 +173,16 @@ int Graf::nrCmpConexe() {
     return nr;
 }
 
+/*
+ BFS, graf Orientat
+ COMPLEXITATE => O(M + N)
+
+ Descriere algoritm:
+    =>
+*/
+
 vector<int> Graf::bfs(const int &start) {
-    vector<int> distante;
-    distante.resize(nrNoduri + 1, -1);
+    vector<int> distante(nrNoduri + 1, -1);
     queue<int> coada;
     coada.push(start);
     distante[start] = 0;
@@ -166,9 +199,16 @@ vector<int> Graf::bfs(const int &start) {
     return distante;
 }
 
+/*
+ Sortare Topologica, graf Orientat
+ COMPLEXITATE => O(M + N)
+
+ Descriere algoritm:
+    =>
+*/
+
 stack<int> Graf::sortareTopologica() {
-    vector<bool> viz;
-    viz.resize(nrNoduri + 1);
+    vector<bool> viz(nrNoduri + 1);
     stack<int> noduriSortTop;
 
     for (int i = 1; i <= nrNoduri; i++){
@@ -189,13 +229,18 @@ void Graf::dfsSortTop(const int &nod, stack<int> &noduriSortTop, vector<bool> &v
     noduriSortTop.push(nod);
 }
 
+/*
+ Componente biconexe, graf Neorientat
+ COMPLEXITATE => O(M + N)
+
+ Descriere algoritm:
+    =>
+*/
+
 vector<vector<int>> Graf :: componenteBiconexe() {
-    vector<bool> viz;
-    viz.resize(nrNoduri + 1);
-    vector<int> nivel;
-    nivel.resize(nrNoduri + 1);
-    vector<int> nivelMin;
-    nivelMin.resize(nrNoduri + 1);
+    vector<bool> viz(nrNoduri + 1);
+    vector<int> nivel(nrNoduri + 1);
+    vector<int> nivelMin(nrNoduri + 1);
     stack<int> s;
     vector<vector<int>> compBiconexe;
     dfsCompBiconexe(1, 1, nivel, nivelMin, s, viz, compBiconexe);
@@ -231,16 +276,20 @@ void Graf :: dfsCompBiconexe(int nod, int nivelCrt, vector<int> &nivel, vector<i
     }
 }
 
+/*
+ Componente Tare Conexe, graf Orientat
+ COMPLEXITATE => O(M + N)
+
+ Descriere algoritm:
+    =>
+*/
+
 vector<vector<int>> Graf :: componenteTareConexe() {
-    vector<bool> viz;
-    viz.resize(nrNoduri + 1);
-    vector<int> nivel;
-    nivel.resize(nrNoduri + 1);
-    vector<int> nivelMin;
-    nivelMin.resize(nrNoduri + 1);
+    vector<bool> viz(nrNoduri + 1);
+    vector<int> nivel(nrNoduri + 1);
+    vector<int> nivelMin(nrNoduri + 1);
     stack<int> s;
-    vector<bool> inStiva;
-    inStiva.resize(nrNoduri + 1);
+    vector<bool> inStiva(nrNoduri + 1);
     vector<vector<int>> ctc;
     int niv = 1;
 
@@ -301,6 +350,15 @@ vector<int> countingSort(const vector<int> &vect) {
     return fr2;
 }
 
+/*
+ Havel Hakimi => Daca se poate construi un graf Neorientat stiind vectorul de grade
+ COMPLEXITATE => SORT STL => O(N^2 * log N)
+              => CountSort => O(N^2) ( O(N * (N + MAX)), dar MAX -> N pt ca gradul unui nod este < nrNoduri)
+
+ Descriere algoritm:
+    =>
+*/
+
 bool HavelHakimi(const int n, const vector<int> &grade){
     vector<int> copieGrade = grade;
     if (*max_element(begin(copieGrade), end(copieGrade)) > n - 1 or
@@ -329,13 +387,18 @@ bool HavelHakimi(const int n, const vector<int> &grade){
     }
 }
 
-/* TEMA 2 */
+/*
+ Dijkstra, graf Orientat
+ COMPLEXITATE => CU VECTOR O(N^2)
+              => CU HEAP O(M * log N)
+              => CU HEAP FIBONACCI O(N * log N + M)
+ Descriere algoritm:
+    =>
+*/
 
 vector<int> Graf::Dijkstra(const int &s) {
-    vector<bool> viz;
-    viz.resize(nrNoduri + 1);
-    vector<int> distante;
-    distante.resize(nrNoduri + 1, INF);
+    vector<bool> viz(nrNoduri + 1);
+    vector<int> distante(nrNoduri + 1, INF);
     priority_queue<pair<int, int>, vector<pair<int,int>>, decltype(cmp)> minHeap(cmp);  // primul element e nodul apoi distanta
     distante[s] = 0;
     minHeap.push({s, distante[s]});
@@ -361,12 +424,28 @@ vector<int> Graf::Dijkstra(const int &s) {
     return distante;
 }
 
+/*
+ Bellman-Ford, graf Orientat  => Drumuri minime de la un varf s dat la celelalte varfuri
+    => arcele pot sa aiba costuri pozitive sau negative
+    => daca exista circuite de cost negativ, algorimul le va detecta => nu are solutie
+ COMPLEXITATE => O(M * N)
+
+ Descriere algoritm:
+    => folosim o coada in care punem nodurile actualizate anterior, initial e doar nodul de start in coada
+        => cat timp coada nu e goala
+            => pentru nodul din front => daca a fost actualizat de N ori => circuit negativ
+                                      => daca nu, parcurg vecinii si vedem daca putem actualiza distanta => daca da, actualizam distanta si crestem numarul de relaxari
+                                      => daca nodul vecin nu este in coada, il adaugam
+    OBS:
+    => relaxam muchiile de N - 1 ori
+    => daca a N-a oara se tot relaxeaza muchii => circuit de cost negativ
+    Optimizare => la un pas este suficient sa relaxam acele arce a caror varfuri au fost actualizate anterior
+*/
+
 bool Graf::BellmanFord(vector<int> &dist, const int &s) {
     queue<int> coadaNoduri;
-    vector<int> nrRelaxari;
-    nrRelaxari.resize(nrNoduri + 1, 0);
-    vector<bool> inCoada;
-    inCoada.resize(nrNoduri + 1, false);
+    vector<int> nrRelaxari(nrNoduri + 1, 0);
+    vector<bool> inCoada(nrNoduri + 1, false);
     coadaNoduri.push(s);
     inCoada[s] = true;
     dist[s] = 0;
@@ -399,6 +478,31 @@ bool Graf::BellmanFord(vector<int> &dist, const int &s) {
     return false;
 }
 
+/*
+ Arbori partiali de cost minim, graf conex Neorientat
+ COMPLEXITATE:
+    PRIM:
+               => CU VECTOR DE VIZITATE O(N^2)
+               => CU MEMORAREA VARFURILOR INTR-UN MIN HEAP O(N * log N)
+               => CU VECTOR DE VIZITATE O(N^2)
+    KRUSKAL:
+               => SORTARE O(M * log N)
+               => CU VECTOR DE REPREZENTANTI O(M * log N + N^2)
+               => STRUCTURI PENTRU MULTIMI DISJUNCTE UNION/FIND 0(M * log N)
+
+ Descriere algoritm:
+    => tin muchiile intr-un vector de tuplu  (vector<tuple<int, int, int>> muchiiCost) cost, nod1, nod2
+    => sortez crescator vectorul de muchii in functie de cost
+    => creez o padure de multimi disjuncte
+    => parcurg vectorul de muchii
+        => daca nodurile muchiei curente au reprezentanti diferiti => reunim
+                                                                   => crestem costul total cu costul muchiei
+                                                                   => adaugam muchia la rezultat
+    => dupa ce am parcurs toate muchiile => returnez costul total
+    (OBS => ne putem opri cand au fost selectate N-1 muchii)
+
+*/
+
 int Graf::Apm(vector<pair<int, int>> &sol){
     int costApm = 0;
     DisjointSets disjointSet(nrNoduri);
@@ -423,19 +527,18 @@ int Graf::Apm(vector<pair<int, int>> &sol){
 }
 
 /*
-    Floyd-Warshall => Complexitate O(n^3)
-=> Graf ORIENTAT cu n noduri, memorat prin matricea ponderilor
- (ponderile pot fi si negative dar NU exista circuite cu cost negativ in G)
-=> Cerinta: Pentru oricare doua varfuri x si y ale lui G, sa se determine distanta de la x la y
-si un drum minim de la x la y.
-=> Idee : Fie d matricea drumurilor (initial egala cu matricea costurilor)
- Parcurgem multimea nodurilor (ca varfuri intermediare) si
- pentru fiecare drum de la un nod i la un nod j, daca varful k este varf intermediar al drumului, atunci
- drumul de la i la j o sa fie minimul dintre drumul gasit anterior si drumul de la i la j prin k.
- d[i][j] = min(d[i][j], d[i][k] + d[k][j]
-=> In plus: Afisarea unui drum de la i la j, daca d[i][j] < INF, se face folosind matricea p (matricea predecesorilor)
- (adica cand am reactualizat drumul de la i la j, actualizam si predecesorul, p[i][j] = p[k][j])
-=> OBS Pentru un graf neorientat matricea drumurilor minime o sa fie simetrica
+ Floyd-Warshall  => Graf ORIENTAT cu n noduri, memorat prin matricea ponderilor
+     (ponderile pot fi si negative dar NU exista circuite cu cost negativ in G)
+ COMPLEXITATE O(n^3)
+    => Cerinta: Pentru oricare doua varfuri x si y ale lui G, sa se determine distanta minima de la x la y
+    => Idee : Fie d matricea drumurilor (initial egala cu matricea costurilor)
+     Parcurgem multimea nodurilor (ca varfuri intermediare) si
+     pentru fiecare drum de la un nod i la un nod j, daca varful k este varf intermediar al drumului, atunci
+     drumul de la i la j o sa fie minimul dintre drumul gasit anterior si drumul de la i la j prin k.
+     d[i][j] = min(d[i][j], d[i][k] + d[k][j]
+    => In plus: Afisarea unui drum de la i la j, daca d[i][j] < INF, se face folosind matricea p (matricea predecesorilor)
+     (adica cand am reactualizat drumul de la i la j, actualizam si predecesorul, p[i][j] = p[k][j])
+    => OBS Pentru un graf neorientat matricea drumurilor minime o sa fie simetrica
 */
 
 vector<vector<long long>> Graf::RoyFloyd(vector<vector<long long>> &matrDrumuriMin) {
@@ -458,6 +561,18 @@ int Graf::nodCuDistantaMaxima(const vector<int> &distante) {
     return nod; //nod cu distanta maxima
 }
 
+/*
+    Darb - Diametrul unui arbore
+    COMPLEXITATE => O(N)  OBS => O(N + M), dar fiind arbore M = N - 1
+
+    Diametrul unui arbore reprezintă lungimea drumului (ca numar de noduri) intre cele mai departate două frunze.
+
+Descriere algoritm:
+    => prima parcurgere BFS ne da un capat al drumului de lungime maxima in arbore (nodul cu distanta maxima)
+    => a doua parcurgere BFS (pornind din nodul gasit cu prima parcurgere) ne da al doilea capat al diametrului (nodul cu distanta maxima)
+    => diametrul o sa fie egal cu distanta maxima, dupa al doilea BFS, + 1 (+ 1 pentru ca vrem diametrul ca numar de noduri, iar BFS-UL ne da nr de muchii intre 2 noduri)
+ */
+
 int Graf::diametruArbore() {
     vector<int> distante = bfs();
 
@@ -467,6 +582,87 @@ int Graf::diametruArbore() {
     int diametru = distante[nod2] + 1;
 
     return diametru;
+}
+
+/*
+ MaxFlow - Graf Orientat
+ COMPLEXITATE => O(N * M^2)
+
+ Descriere algoritm:
+    => Incercăm să trimitem marfă (flux) de la vârful sursă s la destinația t
+    => Folosim 2 matrice -> de capacitate (capacitatea maxima care SE POATE TRIMITE pe muchia i j)
+                         -> de flux (cantitatea care a fost dusa pana la momentul respectiv)
+    => cat timp gasim un drum (cu BFS)
+        => adaugam la fluxulMaxim (rezultat) fluxulMinim (gasit pe drumul curent)
+        => actualizam fluxul pentru fiecare muchie din drumul curent => daca e muchie directa adaug flux (cat flux am dus)
+                                                                     => daca e muchie inversa scad flux (cat flux mai pot duce)
+    => daca nu mai exista drumuri => return fluxMaxim
+*/
+
+int Graf::maxFlow(const int &s, const int&f) {
+    vector<vector<int>> capacitate(nrNoduri + 1, vector<int>(nrNoduri + 1));
+    vector<vector<int>> flux(nrNoduri + 1, vector<int>(nrNoduri + 1));
+    int fluxMaxim = 0;
+    vector<int> tata(nrNoduri + 1, 0);
+
+    for(int i = 1; i <= nrNoduri; i++){
+        int nrVecini = listaAdsiCosturi[i].size();
+        for(int j = 0; j < nrVecini; j++){
+            int nodVecin = listaAdsiCosturi[i][j].first;
+            capacitate[i][nodVecin] = listaAdsiCosturi[i][j].second;
+        }
+    }
+
+    while(construiesteDrum(s, f, tata, capacitate, flux)){
+        int fluxDrum = INF;
+        int nod = f;
+        while (nod != s){
+            fluxDrum = min(fluxDrum, capacitate[tata[nod]][nod] - flux[tata[nod]][nod]);
+            nod = tata[nod];
+        }
+
+        fluxMaxim += fluxDrum;
+
+        nod = f;
+        while (nod != s){
+            int nodTata = tata[nod];
+            flux[nodTata][nod] += fluxDrum;
+            flux[nod][nodTata] -= fluxDrum;
+            nod = tata[nod];
+        }
+    }
+
+    return fluxMaxim;
+
+}
+
+bool Graf::construiesteDrum(const int &start, const int &final, vector<int> &tata, vector<vector<int>> &capacitate, vector<vector<int>> &flux) {
+   fill(begin(tata), begin(tata) + nrNoduri + 1, 0);
+    vector<bool> viz(nrNoduri + 1, false);
+    queue<int> coada;
+
+    coada.push(start);
+    tata[start] = -1;
+    viz[start] = true;
+
+    while (!coada.empty()){
+        int nod = coada.front();
+        int nrVecini = listaAdsiCosturi[nod].size();
+        for (int i = 0; i < nrVecini; i++){
+            int vecinCrt = listaAdsiCosturi[nod][i].first;
+            if (!viz[vecinCrt] and capacitate[nod][vecinCrt] - flux[nod][vecinCrt] > 0){
+                if (vecinCrt == final){
+                    tata[vecinCrt] = nod;
+                    return true;
+                }
+                coada.push(vecinCrt);
+                viz[vecinCrt] = true;
+                tata[vecinCrt] = nod;
+            }
+        }
+        coada.pop();
+    }
+    return false;
 }
 
 /* -------------------------------------------------------------------------------------------------------------------*/
@@ -481,13 +677,15 @@ void rezultatDfs(){
     ofstream fout ("dfs.out");
     int noduri, muchii, s;
     fin >> noduri >> muchii;
-    Graf G(noduri, muchii, false);
+    Graf G(noduri, muchii, false, false);
     for (int i = 0; i < muchii; i++){
         int n1, n2;
         fin >> n1 >> n2;
         G.adaugaInListaAd(n1, n2);
     }
     fout << G.nrCmpConexe() << "\n";
+    fin.close();
+    fout.close();
 }
 
 /*
@@ -500,7 +698,7 @@ void rezultatBfs(){
     ofstream fout ("bfs.out");
     int noduri, muchii, s;
     fin >> noduri >> muchii >> s;
-    Graf G(noduri, muchii, true);
+    Graf G(noduri, muchii, true, false);
     for (int i = 0; i < muchii; i++){
         int n1, n2;
         fin >> n1 >> n2;
@@ -510,6 +708,8 @@ void rezultatBfs(){
     for (int i = 1; i <= noduri; i++){
         fout << distanteMinBfs[i] <<" ";
     }
+    fin.close();
+    fout.close();
 }
 
 /*
@@ -522,7 +722,7 @@ void rezultatSortareTopologica(){
     ofstream fout ("sortaret.out");
     int noduri, muchii, s;
     fin >> noduri >> muchii;
-    Graf G(noduri, muchii, true);
+    Graf G(noduri, muchii, true, false);
     for (int i = 0; i < muchii; i++){
         int n1, n2;
         fin >> n1 >> n2;
@@ -533,6 +733,8 @@ void rezultatSortareTopologica(){
         fout << noduriSortTop.top() << " ";
         noduriSortTop.pop();
     }
+    fin.close();
+    fout.close();
 }
 
 /*
@@ -545,7 +747,7 @@ void rezultatComponenteBiconexe(){
     ofstream fout ("biconex.out");
     int noduri, muchii, s;
     fin >> noduri >> muchii;
-    Graf G(noduri, muchii, false);
+    Graf G(noduri, muchii, false, false);
     for (int i = 0; i < muchii; i++){
         int n1, n2;
         fin >> n1 >> n2;
@@ -559,6 +761,8 @@ void rezultatComponenteBiconexe(){
         }
         fout << "\n";
     }
+    fin.close();
+    fout.close();
 }
 
 /*
@@ -571,7 +775,7 @@ void rezultatComponenteTareConexe() {
     ofstream fout("ctc.out");
     int noduri, muchii, s;
     fin >> noduri >> muchii;
-    Graf G(noduri, muchii, true);
+    Graf G(noduri, muchii, true, false);
     for (int i = 0; i < muchii; i++) {
         int n1, n2;
         fin >> n1 >> n2;
@@ -585,6 +789,8 @@ void rezultatComponenteTareConexe() {
         }
         fout << "\n";
     }
+    fin.close();
+    fout.close();
 }
 
 /*
@@ -608,6 +814,8 @@ void rezultatHavelHakimi(){
     } else {
         fout << "Nu\n";
     }
+    fin.close();
+    fout.close();
 }
 
 /*
@@ -621,7 +829,7 @@ void rezultatDijkstra(){
     int noduri, muchii, s;
     fin >> noduri >> muchii;
     //    fin >> noduri >> muchii >> s;
-    Graf G(noduri, muchii, true);
+    Graf G(noduri, muchii, true, true);
     for (int i = 0; i < muchii; i++){
         int n1, n2, cost;
         fin >> n1 >> n2 >> cost;
@@ -636,6 +844,8 @@ void rezultatDijkstra(){
             fout << dist[i] << " ";
         }
     }
+    fin.close();
+    fout.close();
 }
 
 /*
@@ -649,14 +859,13 @@ void rezultatBellmanFord(){
     int noduri, muchii, s;
     fin >> noduri >> muchii;
     //    fin >> noduri >> muchii >> s;
-    Graf G(noduri, muchii, true);
+    Graf G(noduri, muchii, true, true);
     for (int i = 0; i < muchii; i++){
         int n1, n2, cost;
         fin >> n1 >> n2 >> cost;
         G.adaugaInListaAdSiCosturi(n1, n2, cost); //  pe Orientat
     }
-    vector<int> distante;
-    distante.resize(noduri + 1, INF);
+    vector<int> distante(noduri + 1, INF);
     // bool eCircuit = G.BellmanFord(s);
     bool eCircuit = G.BellmanFord(distante);
     if (!eCircuit){
@@ -666,7 +875,13 @@ void rezultatBellmanFord(){
     } else {
         fout << "Ciclu negativ!" << "\n";
     }
+    fin.close();
+    fout.close();
 }
+
+/*
+ Paduri de multimi disjuncte
+*/
 
 void rezultatDisjoint(){
 //    https://www.infoarena.ro/problema/disjoint
@@ -692,6 +907,8 @@ void rezultatDisjoint(){
             }
         }
     }
+    fin.close();
+    fout.close();
 }
 
 /*
@@ -715,6 +932,8 @@ void rezultatApm(){
     for (int i = 0; i < sol.size(); i ++){
         fout << sol[i].first << " " << sol[i].second << "\n";
     }
+    fin.close();
+    fout.close();
 }
 
 /*
@@ -752,6 +971,8 @@ void rezultatRoyFloyd(){
         }
         fout << "\n";
     }
+    fin.close();
+    fout.close();
 }
 
 /*
@@ -764,13 +985,38 @@ void rezultatDarb(){
     ofstream fout("darb.out");
     int nrNoduri;
     fin >> nrNoduri;
-    Graf g(nrNoduri, false);
+    Graf g(nrNoduri,  false);
     for(int i = 0; i < nrNoduri; i ++){
         int n1, n2;
         fin >> n1 >> n2;
         g.adaugaInListaAd(n1, n2);
     }
     fout << g.diametruArbore();
+    fin.close();
+    fout.close();
+}
+
+/*
+    MaxFlow - Graf Orientat
+*/
+
+void rezultatMaxFlow(){
+//    https://www.infoarena.ro/problema/maxflow
+    ifstream fin("maxflow.in");
+    ofstream fout("maxflow.out");
+    int nrNoduri, nrMuchii, start, final;
+    start = 1;
+//    fin >>  nrNoduri >> nrMuchii >> start >> final;
+    fin >> nrNoduri >> nrMuchii;
+    Graf g(nrNoduri, nrMuchii, true, true);
+    for(int i = 0; i < nrMuchii; i ++){
+        int n1, n2, cost;
+        fin >> n1 >> n2 >> cost;
+        g.adaugaInListaAdSiCosturi(n1, n2, cost);
+    }
+    fout << g.maxFlow(start, nrNoduri);
+    fin.close();
+    fout.close();
 }
 
 int main() {
@@ -786,7 +1032,7 @@ int main() {
     rezultatApm();
     rezultatRoyFloyd();
     rezultatDarb();
-
+    rezultatMaxFlow();
     return 0;
 }
 
