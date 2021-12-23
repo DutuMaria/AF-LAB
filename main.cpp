@@ -13,12 +13,6 @@ using namespace std;
 
 const int INF = numeric_limits<int>::max();
 
-auto cmp = [](const pair<int, int>& p1, const pair<int, int>& p2)
-{
-    return p1.second > p2.second;
-};
-
-
 class DisjointSets{
 private:
     int nrMultimi, nrOperatii;
@@ -41,10 +35,14 @@ public:
 
 /*
  Paduri de multimi disjuncte
- COMPLEXITATE: => O(M * log N)
+ COMPLEXITATE => O(M * log N)
     INITIALIZARE: O(1), dar se face de N ori => O(N)
     FIND_REPREZ: O(log N), dar se face de 2M ori =>  O(M * log N)
     UNION: O(log n), dar se face de N ori => O(N * log N)
+
+ Ce am folosit:
+    => memoram varfurile fiecarei multimi ca un arbore (vector<int> tata),  avand ca reprezentant radacina
+    => pentru inaltimi -> vector<int> h
 
  Descriere algoritm:
     => INITIALIZARE => fiecare nod reprezinta un arbore (doar el, fiind si radacina)
@@ -101,22 +99,25 @@ private:
     void dfsCompTareConexe(int nod, int &nivelCrt, vector<int> &nivel, vector<int> &nivelMin, stack<int> &s, vector<bool> &inStiva, vector<bool> &viz, vector<vector<int>> &ctc);
     int nodCuDistantaMaxima(const vector<int> &distante);
     bool construiesteDrum(const int &start, const int &final, vector<int> &tata, vector<vector<int>> &capacitate, vector<vector<int>> &flux);
+
 public:
-    Graf(int nrNoduri, bool eOrientat) : nrNoduri(nrNoduri), eOrientat(eOrientat) {};
+    Graf(int nrNoduri, bool eOrientat) : nrNoduri(nrNoduri), eOrientat(eOrientat) {}; // Pentru Floyd-Warshall/Roy-Floyd
     Graf(int nrNoduri, int nrMuchii, bool eOrientat) : nrNoduri(nrNoduri), nrMuchii(nrMuchii), eOrientat(eOrientat){}; // Pentru APM
     Graf(int nrNoduri, int nrMuchii, bool eOrientat, bool ePonderat) : nrNoduri(nrNoduri), nrMuchii(nrMuchii), eOrientat(eOrientat), ePonderat(ePonderat) {
         if(!ePonderat){
             listaAd.resize(nrNoduri + 1, vector<int>());
         } else {
-            listaAdsiCosturi.resize(nrNoduri + 1, vector<pair<int, int>>()); // pentru Dijkstra si Bellman-Ford
+            listaAdsiCosturi.resize(nrNoduri + 1, vector<pair<int, int>>()); // pentru Dijkstra, Bellman-Ford si MaxFlow
         }
     };
+
     void adaugaInListaAd(const int &nod1, const int &nod2);
-    void adaugaInListaAdSiCosturi(const int &nod1, const int &nod2, const int &cost);
-    void adaugaMuchieCuCost(const int &nod1, const int &nod2, const int &cost);
+    void adaugaInListaAdSiCosturi(const int &nod1, const int &nod2, const int &cost); // pentru Dijkstra, Bellman-Ford si MaxFlow
+    void adaugaMuchieCuCost(const int &nod1, const int &nod2, const int &cost); // Pentru APM
+
     int nrCmpConexe();
     vector<int> bfs(const int &start = 1);
-    stack<int> sortareTopologica();
+    vector<int> sortareTopologica();
     vector<vector<int>> componenteBiconexe();
     vector<vector<int>> componenteTareConexe();
     vector<int> Dijkstra(const int &s = 1);
@@ -146,9 +147,18 @@ void Graf::adaugaMuchieCuCost(const int &nod1, const int &nod2, const int &cost)
  DFS, graf Neorientat
  COMPLEXITATE => O(M + N)
 
- Descriere algoritm:
-    =>
+ Ce am folosit:
+    => vector<bool> viz este vectorul de vizitate
+        * viz[i] = false inseamna ca nodul i nu a fost vizitat
+        * viz[i] = true inseamna ca nodul i a fost vizitat
+    => int nr =  numarul total de componente conexe (rezultatul dorit)
 
+ Descriere algoritm:
+   => 2 functii -> dfs => se apeleaza dintr-un nod nevizitat
+                       => parcurgem vecinii nodului
+                       => daca vecinul curent nu este vizitat atunci il vizitam si apelam dfs pentru vecinul respectiv
+                -> nrCmpConexe => parcurgem toate nodurile
+                               => cand gasim un nod nevizitat inseamna ca am gasit o noua componenta conexa si apelam dfs pentru nodul respectiv
 */
 
 void Graf::dfs(const int &nod, vector<bool> &viz) {
@@ -177,8 +187,17 @@ int Graf::nrCmpConexe() {
  BFS, graf Orientat
  COMPLEXITATE => O(M + N)
 
+ Ce am folosit:
+     => vector<int> distante => distante[i] = x  => inseamna ca distanta de la nodul de start la i este x
+                             => nodul de start are distanta 0
+     => queue<int> coada => in coada se afla initial nodul de start, ulterior punem pentru fiecare nod vecinii nevizitati in coada
+
  Descriere algoritm:
-    =>
+    => cat timp coada are elemente
+        => luam nodul din front
+        => adaugam in coada toti vecinii nevizitati ai nodului
+        => crestem distanta
+        => dupa ce am procesat toti vecinii nodului il scoatem din coada
 */
 
 vector<int> Graf::bfs(const int &start) {
@@ -203,20 +222,38 @@ vector<int> Graf::bfs(const int &start) {
  Sortare Topologica, graf Orientat
  COMPLEXITATE => O(M + N)
 
+ Ce am folosit:
+    => vector<int> viz - vectorul cu starea nodurilor (vizitat sau nu)
+    => stack<int> noduriSortTop - se pun nodurile pe stiva cand cand ne intoarcem din recursivitate
+    => vector<int> rezultat - luam de pe stiva nodurile
+                            => dau pop in ordinea inversa apelurilor recursive si asa se mentine ordinea nodurilor
+
  Descriere algoritm:
-    =>
+     => 2 functii -> sortareTopologica => parcurg nodurile si daca nodul curent nu e vizitat apelez pentru nodul respectiv dfsSortTop
+                                       => dupa ce le-am parcurs pe toate, pun toate nodurile din stiva in vectorul rezultat
+                  -> dfsSortTop => vizitez nodul pentru care fac apelul
+                                => parcurg vecinii nodului curent si daca nu sunt vizitati apelam dfsSortTop pentru fiecare vecin
+ OBS -> VARIANTA 2 => CU VECTOR DE GRADE INTERIOARE + COADA PENTRU PARCURGERE
 */
 
-stack<int> Graf::sortareTopologica() {
+vector<int> Graf::sortareTopologica() {
     vector<bool> viz(nrNoduri + 1);
     stack<int> noduriSortTop;
+    vector<int> rezultat;
 
     for (int i = 1; i <= nrNoduri; i++){
         if (!viz[i]) {
             dfsSortTop(i, noduriSortTop, viz);
         }
     }
-    return noduriSortTop;
+
+    while (!noduriSortTop.empty()){
+        int nr = noduriSortTop.top();
+        rezultat.push_back(nr);
+        noduriSortTop.pop();
+    }
+
+    return rezultat;
 }
 
 void Graf::dfsSortTop(const int &nod, stack<int> &noduriSortTop, vector<bool> &viz) {
@@ -233,8 +270,30 @@ void Graf::dfsSortTop(const int &nod, stack<int> &noduriSortTop, vector<bool> &v
  Componente biconexe, graf Neorientat
  COMPLEXITATE => O(M + N)
 
+ Ce am folosit:
+    => vector<bool> viz - vector de vizitate
+    => vector<int> nivel - nivel[i] = x inseamna ca nodul i are nivelul = x (nivelul pe care se afla nodul)
+    => vector<int> nivelMin - nivelMin[i] = x inseamna ca nodul i are nivelul minim = x (nivelul minim la care poate ajunge nodul prin intermediul vecinilor)
+    => stack<int> s - pe stiva punem nodurile vizitate, delimitam nodurile din fiecare componenta
+    => vector<vector<int>> compBiconexe - vectorul rezultat, tine toate componentele biconexe
+
  Descriere algoritm:
-    =>
+    => 2 functii -> componenteBiconexe => declararare date
+                                       => apel functie dfsCompBiconexe pentru nodul = 1 si nivelCrt = 1
+                                       => returnez vectorul compBiconexe
+                 -> dfsCompBiconexe => vizitam nodul curent
+                                    => il adaugam pe stiva
+                                    => nivelul nodului devine nivelul curent
+                                    => nivelulMinim devine initial tot nivelul curent
+                                    => pentru fiecare vecin al nodului curent
+                                        -> daca vecinul nu este vizitat
+                                            --> apelam dfsCompBiconexe pentru nodul = vecin si nivelCrt = nivelCrt + 1
+                                            --> cand ne intoarcem din recursivitate recalculam nivelul minim al nodului curent
+                                            --> daca are un vecin care nu urca mai sus de el in arbore => nod critic => incepe o componenta biconexa
+                                            --> luam de pe stiva nodurile pana cand top = vecin + le adaugam in componenta curenta
+                                            --> adaugam componenta curenta la vectorul rezultat
+                                        -> daca vecinul este vizitat
+                                          --> inseamna ca am gasit o muchie de intoarcere => actualizam nivelMin
 */
 
 vector<vector<int>> Graf :: componenteBiconexe() {
@@ -280,8 +339,27 @@ void Graf :: dfsCompBiconexe(int nod, int nivelCrt, vector<int> &nivel, vector<i
  Componente Tare Conexe, graf Orientat
  COMPLEXITATE => O(M + N)
 
+ Ce am folosit:
+    => vector<bool> viz - vector de vizitate
+    => vector<int> nivel - nivel[i] = x inseamna ca nodul i are nivelul = x (nivelul pe care se afla nodul)
+    => vector<int> nivelMin - nivelMin[i] = x inseamna ca nodul i are nivelul minim = x (nivelul minim la care poate ajunge nodul prin intermediul vecinilor)
+    => stack<int> s - pe stiva punem nodurile vizitate, delimitam nodurile din fiecare componenta
+    => vector<bool> inStiva -> inStiva[i] = true/false => nodul i este sau nu pe stiva
+    => vector<vector<int>> ctc - vectorul rezultat, tine toate componentele tare conexe
+
  Descriere algoritm:
-    =>
+    => 2 functii -> componenteTareConexe => declararare date
+                                         => parcurgem toate nodurile si daca nodul curent nu e vizitat => apelam dfsCompTareConexe pentru nodul respectiv
+                                         => returnam vectoul ctc - vector rezultat
+                 -> dfsCompTareConexe => parcugem vecinii nodului curent
+                                      => daca vecinul nu este vizitat
+                                         --> apelam recursiv functia dfsCompTareConexe pentru vecin si cand se intoarce din recursivitate reactualizeaza nivelul minim al nodului
+                                      => daca vecinul este vizitat
+                                         --> daca nu e pe stiva => apartine altei componenete tare conexe
+                                         --> daca e pe stiva => actualizam nivelul minim al nodului curent
+                                      => dupa ce parcurgem vecinii, daca nivelul nodului curent este agla cu nivelul minim al sau => radacina componentei tare conexe
+                                      => adaugam nodurile de pe stiva in componenta curenta pana cand topul este nodul curent
+                                      => adaugam componenta tare conexa la vectorul rezultat
 */
 
 vector<vector<int>> Graf :: componenteTareConexe() {
@@ -331,6 +409,8 @@ void Graf::dfsCompTareConexe(int nod, int &nivelCrt, vector<int> &nivel, vector<
     }
 }
 
+//Count Sort
+
 vector<int> countingSort(const vector<int> &vect) {
     int maxim = *max_element(vect.begin(), vect.end());
     vector<int> fr1(maxim + 1, 0);
@@ -355,8 +435,14 @@ vector<int> countingSort(const vector<int> &vect) {
  COMPLEXITATE => SORT STL => O(N^2 * log N)
               => CountSort => O(N^2) ( O(N * (N + MAX)), dar MAX -> N pt ca gradul unui nod este < nrNoduri)
 
+ Ce am folosit:
+    => vector<int> grade => grade[i] = x (nodul i  are gradul interior = x) (acest vector este constant pentru ca nu vreau sa-l modific)
+    => prelucram vectorul copieGrade
+
  Descriere algoritm:
-    =>
+    => conditii de verificare => daca maximul din vectorul de grade e mai mare decat n - 1 =>  nu se poate reprezenta graful
+                              => suma gradelor este impara => nu se poate reprezenta graful
+    => intr-un loop infinit la fiecare pas => sortez vector de grade
 */
 
 bool HavelHakimi(const int n, const vector<int> &grade){
@@ -387,13 +473,35 @@ bool HavelHakimi(const int n, const vector<int> &grade){
     }
 }
 
+auto cmp = [](const pair<int, int>& p1, const pair<int, int>& p2)
+{
+    return p1.second > p2.second;
+};
+
 /*
- Dijkstra, graf Orientat
+ Dijkstra, graf Orientat (MUCHII CU COST POZITIV)
+ => lungimea minima a drumului de la nodul 1 la fiecare din nodurile 2, 3, ..., N-1, N
+
  COMPLEXITATE => CU VECTOR O(N^2)
               => CU HEAP O(M * log N)
               => CU HEAP FIBONACCI O(N * log N + M)
+
+ Ce am folosit:
+    =>  vector<bool> viz - vector de vizitate
+    =>  vector<int> distante - vectorul rezultat
+    =>  priority_queue<pair<int, int>, vector<pair<int,int>>, decltype(cmp)> minHeap(cmp)
+
  Descriere algoritm:
-    =>
+    => initial -> in minHeap avem perechea (nodul de start = 1, dist = 0)
+    => cat timp heap-ul nu este gol, luam front-ul
+        -> daca front-ul nu a fost vizitat:
+                --> il vizitam
+                --> ii parcurgem vecinii
+                --> daca gasim un vecin nevizitat caruia ii putem actualiza distanta atunci:
+                    => actualizam distanta
+                    => dam push in heap
+     - daca front-ul a fost vizitat => continue (nu calculcam acelasi lucru de mai multe ori)
+    => returnam vectorul de distante
 */
 
 vector<int> Graf::Dijkstra(const int &s) {
@@ -429,6 +537,8 @@ vector<int> Graf::Dijkstra(const int &s) {
     => arcele pot sa aiba costuri pozitive sau negative
     => daca exista circuite de cost negativ, algorimul le va detecta => nu are solutie
  COMPLEXITATE => O(M * N)
+
+ Ce am folosit:
 
  Descriere algoritm:
     => folosim o coada in care punem nodurile actualizate anterior, initial e doar nodul de start in coada
@@ -490,6 +600,8 @@ bool Graf::BellmanFord(vector<int> &dist, const int &s) {
                => CU VECTOR DE REPREZENTANTI O(M * log N + N^2)
                => STRUCTURI PENTRU MULTIMI DISJUNCTE UNION/FIND 0(M * log N)
 
+ Ce am folosit:
+
  Descriere algoritm:
     => tin muchiile intr-un vector de tuplu  (vector<tuple<int, int, int>> muchiiCost) cost, nod1, nod2
     => sortez crescator vectorul de muchii in functie de cost
@@ -530,7 +642,11 @@ int Graf::Apm(vector<pair<int, int>> &sol){
  Floyd-Warshall  => Graf ORIENTAT cu n noduri, memorat prin matricea ponderilor
      (ponderile pot fi si negative dar NU exista circuite cu cost negativ in G)
  COMPLEXITATE O(n^3)
+
+ Ce am folosit:
+
     => Cerinta: Pentru oricare doua varfuri x si y ale lui G, sa se determine distanta minima de la x la y
+
     => Idee : Fie d matricea drumurilor (initial egala cu matricea costurilor)
      Parcurgem multimea nodurilor (ca varfuri intermediare) si
      pentru fiecare drum de la un nod i la un nod j, daca varful k este varf intermediar al drumului, atunci
@@ -562,12 +678,14 @@ int Graf::nodCuDistantaMaxima(const vector<int> &distante) {
 }
 
 /*
-    Darb - Diametrul unui arbore
-    COMPLEXITATE => O(N)  OBS => O(N + M), dar fiind arbore M = N - 1
+ Darb - Diametrul unui arbore
+ COMPLEXITATE => O(N)  OBS => O(N + M), dar fiind arbore M = N - 1
 
     Diametrul unui arbore reprezintă lungimea drumului (ca numar de noduri) intre cele mai departate două frunze.
 
-Descriere algoritm:
+ Ce am folosit:
+
+ Descriere algoritm:
     => prima parcurgere BFS ne da un capat al drumului de lungime maxima in arbore (nodul cu distanta maxima)
     => a doua parcurgere BFS (pornind din nodul gasit cu prima parcurgere) ne da al doilea capat al diametrului (nodul cu distanta maxima)
     => diametrul o sa fie egal cu distanta maxima, dupa al doilea BFS, + 1 (+ 1 pentru ca vrem diametrul ca numar de noduri, iar BFS-UL ne da nr de muchii intre 2 noduri)
@@ -587,6 +705,8 @@ int Graf::diametruArbore() {
 /*
  MaxFlow - Graf Orientat
  COMPLEXITATE => O(N * M^2)
+
+ Ce am folosit:
 
  Descriere algoritm:
     => Incercăm să trimitem marfă (flux) de la vârful sursă s la destinația t
@@ -669,6 +789,7 @@ bool Graf::construiesteDrum(const int &start, const int &final, vector<int> &tat
 
 /*
  DFS, graf Neorientat
+ Cerinta => Sa se determine numarul componentelor conexe ale grafului.
 */
 
 void rezultatDfs(){
@@ -690,6 +811,8 @@ void rezultatDfs(){
 
 /*
  BFS, graf Orientat
+ Cerinta => Fiind dat un nod S, sa se determine, pentru fiecare nod X,
+            numarul minim de arce ce trebuie parcurse pentru a ajunge din nodul sursa S la nodul X.
 */
 
 void rezultatBfs(){
@@ -728,10 +851,9 @@ void rezultatSortareTopologica(){
         fin >> n1 >> n2;
         G.adaugaInListaAd(n1, n2);
     }
-    stack<int> noduriSortTop =  G.sortareTopologica();;
-    while (!noduriSortTop.empty()){
-        fout << noduriSortTop.top() << " ";
-        noduriSortTop.pop();
+    vector<int> noduriSortTop =  G.sortareTopologica();
+    for(int i = 0; i < noduri; i++){
+        fout << noduriSortTop[i] << " ";
     }
     fin.close();
     fout.close();
@@ -881,6 +1003,13 @@ void rezultatBellmanFord(){
 
 /*
  Paduri de multimi disjuncte
+  Cerinta => Se dau N multimi de numere, initial fiecare multime i continand un singur element,
+             mai exact elementul i. Asupra acestor multimi se pot face 2 tipuri de operatii, astfel:
+    * operatia de tipul 1: se dau doua numere naturale x si y, intre 1 si N.
+        Se cere sa reuneasca multimile in care se afla elementul x, respectiv elementul y
+        (se garanteaza ca x si y nu se vor afla in aceeasi multime)
+    * operatia de tipul 2: se dau doua numere naturale x si y, intre 1 si N.
+        Se cere sa afiseze DA daca cele 2 elemente se afla in aceeasi multime, respectiv NU in caz contrar.
 */
 
 void rezultatDisjoint(){
@@ -985,7 +1114,7 @@ void rezultatDarb(){
     ofstream fout("darb.out");
     int nrNoduri;
     fin >> nrNoduri;
-    Graf g(nrNoduri,  false);
+    Graf g(nrNoduri, nrNoduri - 1, false, false);
     for(int i = 0; i < nrNoduri; i ++){
         int n1, n2;
         fin >> n1 >> n2;
@@ -1033,6 +1162,7 @@ int main() {
     rezultatRoyFloyd();
     rezultatDarb();
     rezultatMaxFlow();
+
     return 0;
 }
 
