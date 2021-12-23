@@ -421,7 +421,7 @@ vector<int> countingSort(const vector<int> &vect) {
 
     vector<int> fr2;
     fr2.reserve(vect.size());
-    for (int j = 0; j <= maxim; j++) {
+    for (int j = maxim; j >= 0; j--) {
         while (fr1[j]) {
             fr2.push_back(j);
             fr1[j]--;
@@ -442,7 +442,14 @@ vector<int> countingSort(const vector<int> &vect) {
  Descriere algoritm:
     => conditii de verificare => daca maximul din vectorul de grade e mai mare decat n - 1 =>  nu se poate reprezenta graful
                               => suma gradelor este impara => nu se poate reprezenta graful
-    => intr-un loop infinit la fiecare pas => sortez vector de grade
+    => intr-un loop infinit la fiecare pas => sortez vector de grade descrescator
+                                           => luam cel mai mai mare grad (copieGrade[0])
+                                           => daca grad_crt este 0 => putem reprezenta graful
+                                                => return true
+                                           => il stergem
+                                           => scad din primele grad_crt grade cate unul pentru a simula cate o muchie
+                                                -> daca in urma scaderii, gradul curent devine negativ => nu se poate reprezenta graful
+                                                    => return false
 */
 
 bool HavelHakimi(const int n, const vector<int> &grade){
