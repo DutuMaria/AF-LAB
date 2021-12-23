@@ -493,8 +493,8 @@ auto cmp = [](const pair<int, int>& p1, const pair<int, int>& p2)
 
  Descriere algoritm:
     => initial -> in minHeap avem perechea (nodul de start = 1, dist = 0)
-    => cat timp heap-ul nu este gol, luam front-ul
-        -> daca front-ul nu a fost vizitat:
+    => cat timp heap-ul nu este gol, luam top-ul
+        -> daca top-ul nu a fost vizitat:
                 --> il vizitam
                 --> ii parcurgem vecinii
                 --> daca gasim un vecin nevizitat caruia ii putem actualiza distanta atunci:
